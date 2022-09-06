@@ -1,2 +1,0 @@
-#!/bin/sh
-gcc -o donut donut.c -lncursesw -lm && ./donut
