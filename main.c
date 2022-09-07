@@ -3,36 +3,34 @@
 #include <locale.h>
 #include <signal.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "shapes.h"
 
 volatile sig_atomic_t signal_status = 0;
 
-//void resize_screen() {
-//    char *tty;
-//    int fd = 0;
-//    int result = 0;
-//    struct winsize win;
-//
-//    tty = ttyname(0);
-//    if (!tty) {
-//        return;
-//    }
-//    result = ioctl(0, TIOCGWINSZ, &win);
-//    if (result == -1) {
-//        return;
-//    }
-//
-//    COLS = win.ws_col;
-//    LINES = win.ws_row;
-//
-//    if (LINES < 10) {
-//        LINES = 10;
-//    }
-//    if (COLS < 10) {
-//        COLS = 10;
-//    }
-//    resizeterm(LINES, COLS);
-//}
+/* resize screen logic is recycled from the code found at
+ * https://github.com/abishekvashok/cmatrix
+ */
+void resize_screen(Args *args) {
+    char *tty;
+    int fd = 0;
+    int result = 0;
+    struct winsize winsz;
+    tty = ttyname(0);
+    if (!tty) {
+        return;
+    }
+    result = ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz);
+    if (result == -1) {
+        return;
+    }
+    args->pixels_per_row = winsz.ws_ypixel / winsz.ws_row;
+    args->pixels_per_col = winsz.ws_xpixel / winsz.ws_col;
+    resizeterm(winsz.ws_row < 10 ? 10 : winsz.ws_row,
+		    winsz.ws_col < 10 ? 10 : winsz.ws_col);
+    clear();
+    refresh();
+}
 
 void sig_handler(int s) {
     signal_status = s;
@@ -76,15 +74,17 @@ int main(void) {
             break;
         }
         if (signal_status == SIGWINCH) {
-            //resize_screen();
+            resize_screen(args);
             signal_status = 0;
         }
         if ((keypress = wgetch(stdscr)) == ERR) {
             pthread_create(&thread_id, NULL, donut, (void *) args);
             pthread_join(thread_id, NULL);
         } else {
-            finish();
-            break;
+	    if (keypress == 'q') {
+                finish();
+                break;
+	    }
         }
     }
     return 0;
