@@ -7,8 +7,7 @@
 #define SETBIT(A,k) (A[(k)/8] |= (1 << ((k)%8)))
 #define TESTBIT(A,k) (A[(k)/8] & (1 << ((k)%8)))
 
-void *donut(void *arguments) {
-    Args *args = (Args *) arguments;
+void donut(Args *args) {
     WINDOW *win = args->win;
     int ppr = args->pixels_per_row;
     int ppc = args->pixels_per_col;
@@ -48,14 +47,14 @@ void *donut(void *arguments) {
     wmove(win, 0, 0);
     for(int k = 0; k < total; k++) {
         if (TESTBIT(output, k)) {
-            addstr("🍩");
+            waddstr(win, "🍩");
             k++; //depends on how many 'cursor' places the symbol takes
         } else {
-    	    addch(32);// ascii space
+            waddch(win, 32);// ascii space
         }
     }
     args->x_rotate += 0.07;
     args->z_rotate += 0.03;
     wrefresh(win);
-    usleep(30000); //40000 is default
+    usleep(5000);
 }

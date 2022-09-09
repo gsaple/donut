@@ -1,5 +1,3 @@
-void *donut(void *args);
-
 typedef struct Args {
   WINDOW *win;
   int pixels_per_row;
@@ -7,3 +5,5 @@ typedef struct Args {
   float x_rotate;
   float z_rotate;
 } Args;
+
+void donut(Args *args);

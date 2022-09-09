@@ -2,18 +2,38 @@
 #include <sys/ioctl.h>
 #include <locale.h>
 #include <signal.h>
-#include <pthread.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include "shapes.h"
 
 volatile sig_atomic_t signal_status = 0;
 
+void setup(Args *lty[]) {
+    struct winsize winsz;
+    ioctl(0, TIOCGWINSZ, &winsz);
+    int height, width;
+    height = (winsz.ws_row < 10 ? 10 : winsz.ws_row) / 2;
+    width = (winsz.ws_col < 10 ? 10 : winsz.ws_col) / 2;
+    for (int i = 0; i < 4; i++) {
+        lty[i] = malloc(sizeof(Args));
+        lty[i]->pixels_per_row = winsz.ws_ypixel / winsz.ws_row;
+        lty[i]->pixels_per_col = winsz.ws_xpixel / winsz.ws_col;
+        lty[i]->x_rotate = 0;
+        lty[i]->z_rotate = 0;
+	lty[i]->win = newwin(height, width, i / 2 * (1 + height), i % 2 * (1 + width) );
+    }
+    lty[0]->win = newwin(height, width, 0, 0);
+    lty[1]->win = newwin(height, width, 0, width + 1);
+    lty[2]->win = newwin(height, width, height + 1, 0);
+    lty[3]->win = newwin(height, width, height + 1, width + 1);
+    refresh();
+}
+
 /* resize screen logic is recycled from the code found at
  * https://github.com/abishekvashok/cmatrix
  */
-void resize_screen(Args *args) {
+void resize_screen(Args *lty[]) {
     char *tty;
-    int fd = 0;
     int result = 0;
     struct winsize winsz;
     tty = ttyname(0);
@@ -24,11 +44,16 @@ void resize_screen(Args *args) {
     if (result == -1) {
         return;
     }
-    args->pixels_per_row = winsz.ws_ypixel / winsz.ws_row;
-    args->pixels_per_col = winsz.ws_xpixel / winsz.ws_col;
-    resizeterm(winsz.ws_row < 10 ? 10 : winsz.ws_row,
-		    winsz.ws_col < 10 ? 10 : winsz.ws_col);
+    int height = (winsz.ws_row < 10 ? 10 : winsz.ws_row) / 2;
+    int width = (winsz.ws_col < 10 ? 10 : winsz.ws_col) / 2;
+    resizeterm(height * 2, width * 2);
     clear();
+    for (int i = 0; i < 4; i++) {
+        lty[i]->pixels_per_row = winsz.ws_ypixel / winsz.ws_row;
+        lty[i]->pixels_per_col = winsz.ws_xpixel / winsz.ws_col;
+        delwin(lty[i]->win);
+        lty[i]->win = newwin(height, width, i / 2 * (1 + height), i % 2 * (1 + width) );
+    }
     refresh();
 }
 
@@ -36,11 +61,16 @@ void sig_handler(int s) {
     signal_status = s;
 }
 
-void finish(void) {
+void finish(Args *lty[]) {
+    for (int i = 0; i < 4; i++) {
+        delwin(lty[i]->win);
+        free(lty[i]);
+    }
     curs_set(1);
     clear();
     refresh();
     endwin();
+    system("xdotool key Control+Home");
 }
 
 int main(void) {
@@ -55,34 +85,27 @@ int main(void) {
     signal(SIGQUIT, sig_handler);
     signal(SIGWINCH, sig_handler);
     signal(SIGTSTP, sig_handler);
-    
-    struct winsize winsz;
-    ioctl(0, TIOCGWINSZ, &winsz);
-
-    Args *args; 
-    args->pixels_per_row = winsz.ws_ypixel / winsz.ws_row;
-    args->pixels_per_col = winsz.ws_xpixel / winsz.ws_col;
-    args->win = stdscr;
-    args->x_rotate = 0;
-    args->z_rotate = 0;
-    pthread_t thread_id;
+    Args *layout[4];
     char keypress;
+    setup(layout);
 
     while (1) {
         if (signal_status == SIGINT || signal_status == SIGQUIT || signal_status == SIGTSTP) {
-            finish();
+            finish(layout);
             break;
         }
         if (signal_status == SIGWINCH) {
-            resize_screen(args);
+            resize_screen(layout);
             signal_status = 0;
         }
         if ((keypress = wgetch(stdscr)) == ERR) {
-            pthread_create(&thread_id, NULL, donut, (void *) args);
-            pthread_join(thread_id, NULL);
+	    donut(layout[0]);
+	    donut(layout[1]);
+	    donut(layout[2]);
+	    donut(layout[3]);
         } else {
 	    if (keypress == 'q') {
-                finish();
+                finish(layout);
                 break;
 	    }
         }

@@ -1,5 +1,5 @@
 CC = gcc
-LIBS = -lm -lncursesw -lpthread
+LIBS = -lm -lncursesw
 
 OBJS = main.o shapes.o
 donut : $(OBJS)
