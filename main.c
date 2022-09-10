@@ -104,11 +104,20 @@ int main(void) {
 	    donut(layout[2]);
 	    donut(layout[3]);
         } else {
-	    if (keypress == 'q') {
-                finish(layout);
-                break;
+	    switch (keypress) {
+                case 'q':
+		    goto exit_loop;
+                    break;
+		case 'j':
+		    system("xdotool key Control+minus");
+		    break;
+		case 'k':
+		    system("xdotool key Control+equal");
+		    break;
 	    }
         }
     }
+    exit_loop:
+        finish(layout);
     return 0;
 }
