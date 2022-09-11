@@ -5,6 +5,7 @@ OBJS = main.o shapes.o
 donut : $(OBJS)
 	$(CC) -o donut $(OBJS) $(LIBS)
 $(OBJS) : shapes.h
+main.o : zoom.h
 
 .PHONNY : clean
 clean :

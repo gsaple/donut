@@ -5,72 +5,79 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "shapes.h"
+#include "zoom.h"
 
+/* global variables */
 volatile sig_atomic_t signal_status = 0;
+int ppr, ppc; // pixels_per_row, pixels_per_column
+int rows, cols; // rows_per_window, cols_per_window
+int total; // how many grids in one window
+int bytes; // how much memory (bytes) needed for one window to do bitwise operations
+Donut donut = {0.0};
+WINDOW *windows[4];
 
-void setup(Args *lty[]) {
+void setup() {
     struct winsize winsz;
     ioctl(0, TIOCGWINSZ, &winsz);
-    int height, width;
-    height = (winsz.ws_row < 10 ? 10 : winsz.ws_row) / 2;
-    width = (winsz.ws_col < 10 ? 10 : winsz.ws_col) / 2;
+    ppr = winsz.ws_ypixel / winsz.ws_row;
+    ppc = winsz.ws_xpixel / winsz.ws_col;
+    rows = winsz.ws_row >> 1;
+    cols = winsz.ws_col >> 1;
+    total = rows * cols;
+    bytes = (total + 7) / 8;
+    //int height, width;
+    //height = (winsz.ws_row < 10 ? 10 : winsz.ws_row) / 2;
+    //width = (winsz.ws_col < 10 ? 10 : winsz.ws_col) / 2;
     for (int i = 0; i < 4; i++) {
-        lty[i] = malloc(sizeof(Args));
-        lty[i]->pixels_per_row = winsz.ws_ypixel / winsz.ws_row;
-        lty[i]->pixels_per_col = winsz.ws_xpixel / winsz.ws_col;
-        lty[i]->x_rotate = 0;
-        lty[i]->z_rotate = 0;
-	lty[i]->win = newwin(height, width, i / 2 * (1 + height), i % 2 * (1 + width) );
+	windows[i] = newwin(rows, cols, i / 2 * (1 + rows), i % 2 * (1 + cols) );
     }
-    lty[0]->win = newwin(height, width, 0, 0);
-    lty[1]->win = newwin(height, width, 0, width + 1);
-    lty[2]->win = newwin(height, width, height + 1, 0);
-    lty[3]->win = newwin(height, width, height + 1, width + 1);
+    // donut will be roughly centred at 75% of the screen
+    donut.R1 = rows * ppr * 1.0 / 8;
+    donut.R2 = rows * ppr * 2.0 / 8;
     refresh();
 }
 
 /* resize screen logic is recycled from the code found at
  * https://github.com/abishekvashok/cmatrix
  */
-void resize_screen(Args *lty[]) {
-    char *tty;
-    int result = 0;
-    struct winsize winsz;
-    tty = ttyname(0);
-    if (!tty) {
-        return;
-    }
-    result = ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz);
-    if (result == -1) {
-        return;
-    }
-    int height = (winsz.ws_row < 10 ? 10 : winsz.ws_row) / 2;
-    int width = (winsz.ws_col < 10 ? 10 : winsz.ws_col) / 2;
-    resizeterm(height * 2, width * 2);
-    clear();
-    for (int i = 0; i < 4; i++) {
-        lty[i]->pixels_per_row = winsz.ws_ypixel / winsz.ws_row;
-        lty[i]->pixels_per_col = winsz.ws_xpixel / winsz.ws_col;
-        delwin(lty[i]->win);
-        lty[i]->win = newwin(height, width, i / 2 * (1 + height), i % 2 * (1 + width) );
-    }
-    refresh();
-}
+//void resize_screen(Args *lty[]) {
+//    char *tty;
+//    int result = 0;
+//    struct winsize winsz;
+//    tty = ttyname(0);
+//    if (!tty) {
+//        return;
+//    }
+//    result = ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz);
+//    if (result == -1) {
+//        return;
+//    }
+//    int height = (winsz.ws_row < 10 ? 10 : winsz.ws_row) / 2;
+//    int width = (winsz.ws_col < 10 ? 10 : winsz.ws_col) / 2;
+//    resizeterm(height * 2, width * 2);
+//    clear();
+//    refresh();
+//    for (int i = 0; i < 4; i++) {
+//        lty[i]->pixels_per_row = winsz.ws_ypixel / winsz.ws_row;
+//        lty[i]->pixels_per_col = winsz.ws_xpixel / winsz.ws_col;
+//        delwin(lty[i]->win);
+//        lty[i]->win = newwin(height, width, i / 2 * (1 + height), i % 2 * (1 + width) );
+//    }
+//}
 
 void sig_handler(int s) {
     signal_status = s;
 }
 
-void finish(Args *lty[]) {
+void finish() {
     for (int i = 0; i < 4; i++) {
-        delwin(lty[i]->win);
-        free(lty[i]);
+        delwin(windows[i]);
     }
     curs_set(1);
     clear();
     refresh();
     endwin();
-    system("xdotool key Control+Home");
+    system(zoom_back);
 }
 
 int main(void) {
@@ -85,39 +92,45 @@ int main(void) {
     signal(SIGQUIT, sig_handler);
     signal(SIGWINCH, sig_handler);
     signal(SIGTSTP, sig_handler);
-    Args *layout[4];
+    Donut *p0 = &donut;
+
     char keypress;
-    setup(layout);
+    setup();
 
     while (1) {
         if (signal_status == SIGINT || signal_status == SIGQUIT || signal_status == SIGTSTP) {
-            finish(layout);
+            finish();
             break;
         }
         if (signal_status == SIGWINCH) {
-            resize_screen(layout);
+            //resize_screen(layout);
             signal_status = 0;
         }
         if ((keypress = wgetch(stdscr)) == ERR) {
-	    donut(layout[0]);
-	    donut(layout[1]);
-	    donut(layout[2]);
-	    donut(layout[3]);
+        //if ((keypress = wgetch(stdscr)) == 'a') {
+	    draw_donut(p0, windows[0]);
+	    draw_donut(p0, windows[1]);
+	    draw_donut(p0, windows[2]);
+	    draw_donut(p0, windows[3]);
         } else {
 	    switch (keypress) {
                 case 'q':
 		    goto exit_loop;
                     break;
 		case 'j':
-		    system("xdotool key Control+minus");
+		    clear();
+		    refresh();
+		    system(zoom_out);
 		    break;
 		case 'k':
-		    system("xdotool key Control+equal");
+		    clear();
+		    refresh();
+		    system(zoom_in);
 		    break;
 	    }
         }
     }
     exit_loop:
-        finish(layout);
+        finish();
     return 0;
 }

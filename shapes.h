@@ -1,9 +1,8 @@
-typedef struct Args {
-  WINDOW *win;
-  int pixels_per_row;
-  int pixels_per_col;
+typedef struct Donut{
   float x_rotate;
   float z_rotate;
-} Args;
+  float R1;
+  float R2;
+} Donut;
 
-void donut(Args *args);
+void draw_donut(Donut *donut, WINDOW *win);
