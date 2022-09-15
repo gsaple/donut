@@ -48,8 +48,9 @@ void setup() {
     total = rows * cols;
     bytes = (total + 7) / 8;
     // objects will be roughly centred at 75% of the screen
-    donut.R1 = rows * ppr * 1.0 / 8;
-    donut.R2 = rows * ppr * 2.0 / 8;
+    int range = winsz.ws_ypixel > winsz.ws_xpixel ? winsz.ws_xpixel >> 1 : winsz.ws_ypixel >> 1;
+    donut.R1 = range * 1.0 / 8;
+    donut.R2 = range * 2.0 / 8;
 }
 
 void finish() {
