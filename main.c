@@ -106,9 +106,11 @@ int main(void) {
 	while (w_resize) {
 	    clear_screen();
 	    setup();
-            resizeterm(winsz.ws_row, winsz.ws_col);
-	    create_windows();
-            w_resize = 0;
+	    if (winsz.ws_row >= 2 && winsz.ws_col >= 2) {
+                resizeterm(winsz.ws_row, winsz.ws_col);
+                create_windows();
+                w_resize = 0;
+	    }
 	}
         while (f_resize);
         if ((keypress = wgetch(stdscr)) == ERR ) {
