@@ -7,41 +7,19 @@
 #include "shapes.h"
 #include "zoom.h"
 
-static int to_draw = 1;
-static int to_resize = 0;
-
 int ppr = 0, ppc = 0; // pixels_per_row, pixels_per_column
-int old_ppr = 0;
-int ppr_min = 6, ppr_max = 27;
 int rows, cols; // rows_per_window, cols_per_window
 int total; // how many grids in one window
 int bytes; // how much memory (bytes) needed for one window to do bitwise operations
-Donut donut = {0.0};
-WINDOW *windows[4];
-int keypress;
 
-void setup() {
-    //if it is the first time setup being called
-    if (!ppr) {
-        struct winsize winsz;
-        ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz);
-        ppr = winsz.ws_ypixel / winsz.ws_row;
-        old_ppr = ppr;
-        ppc = winsz.ws_xpixel / winsz.ws_col;
-        rows = winsz.ws_row >> 1;
-        cols = winsz.ws_col >> 1;
-        total = rows * cols;
-        bytes = (total + 7) / 8;
-    }
-    // donut will be roughly centred at 75% of the screen
-    donut.R1 = rows * ppr * 1.0 / 8;
-    donut.R2 = rows * ppr * 2.0 / 8;
-
-    for (int i = 0; i < 4; i++) {
-	windows[i] = newwin(rows, cols, i / 2 * (1 + rows), i % 2 * (1 + cols) );
-    }
-    refresh();
-}
+static int w_resize = 0; // resize caused by adjusting window size
+static int f_resize = 0; // resize caused by adjusting font size
+static int to_finish = 0;
+static int ppr_min = 5, ppr_max = 27;
+static int keypress;
+static struct winsize winsz;
+static Donut donut = {0.0};
+static WINDOW *windows[4];
 
 void clear_screen() {
     for (int i = 0; i < 4; i++) {
@@ -51,40 +29,27 @@ void clear_screen() {
     refresh();
 }
 
-/* some of the admin logic is recycled from the code found at
- * https://github.com/abishekvashok/cmatrix
- */
-void resize_screen() {
-    char *tty;
-    int result = 0;
-    struct winsize winsz;
-    tty = ttyname(0);
-    if (!tty) {
-        return;
+void create_windows() {
+    for (int i = 0; i < 4; i++) {
+	windows[i] = newwin(rows, cols, i / 2 * (1 + rows), i % 2 * (1 + cols));
     }
-    result = ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz);
-    if (result == -1) {
-        return;
+    refresh();
+}
+
+void setup() {
+    //if it is the first time setup being called
+    if (!ppr) {
+        ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz);
     }
     ppr = winsz.ws_ypixel / winsz.ws_row;
-
-    if (keypress == ERR) {
-        // corner case: directly zoom in or zoom out without using 'j' or 'k'
-        if (ppr != old_ppr) {
-            ppr = old_ppr;
-            return;
-	}
-	// should be when window is resized by frame size, not by font size
-        clear_screen();
-    }
-    old_ppr = ppr;
     ppc = winsz.ws_xpixel / winsz.ws_col;
     rows = winsz.ws_row >> 1;
     cols = winsz.ws_col >> 1;
     total = rows * cols;
     bytes = (total + 7) / 8;
-    resizeterm(winsz.ws_row, winsz.ws_col);
-    setup();
+    // objects will be roughly centred at 75% of the screen
+    donut.R1 = rows * ppr * 1.0 / 8;
+    donut.R2 = rows * ppr * 2.0 / 8;
 }
 
 void finish() {
@@ -99,8 +64,23 @@ void sig_handler(int sig) {
     if (sig == SIGINT || sig == SIGQUIT || sig == SIGTSTP)
         finish();
     if (sig == SIGWINCH) {
-        resize_screen();
-        to_resize = 0;
+        if (!ttyname(0))
+            return;
+        if (ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz) == -1)
+            return;
+	if (keypress == 'k' || keypress == 'j') {
+	    setup();
+            resizeterm(winsz.ws_row, winsz.ws_col);
+	    create_windows();
+            f_resize = 0;
+	    return;
+	}
+	if (ppr == winsz.ws_ypixel / winsz.ws_row) {
+	    w_resize = 1;
+	    return;
+	}
+	// font adjusted without 'k' or 'j', just quit
+	to_finish = 1;
     }
 }
 
@@ -119,9 +99,18 @@ int main(void) {
 
     Donut *p0 = &donut;
     setup();
+    create_windows();
 
     while (1) {
-        while (to_resize);
+	while (to_finish) {finish();}
+	while (w_resize) {
+	    clear_screen();
+	    setup();
+            resizeterm(winsz.ws_row, winsz.ws_col);
+	    create_windows();
+            w_resize = 0;
+	}
+        while (f_resize);
         if ((keypress = wgetch(stdscr)) == ERR ) {
 	    draw_donut(p0, windows[0]);
 	    draw_donut(p0, windows[1]);
@@ -130,18 +119,18 @@ int main(void) {
         } else {
 	    switch (keypress) {
                 case 'q':
-		    finish();
+		    to_finish = 1;
 		    break;
 		case 'j':
 		    if (ppr > ppr_min) {
-			to_resize = 1;
+			f_resize = 1;
                         clear_screen();
 		        system(zoom_out);
 		    } 
 		    break;
 		case 'k':
 		    if (ppr < ppr_max) {
-			to_resize = 1;
+			f_resize = 1;
                         clear_screen();
 		        system(zoom_in);
 		    }
