@@ -19,6 +19,7 @@ static int ppr_min = 5, ppr_max = 27;
 static int keypress;
 static struct winsize winsz;
 static Donut donut = {0.0};
+static Heart heart = {0.0};
 static WINDOW *windows[4];
 
 void clear_screen() {
@@ -46,11 +47,12 @@ void setup() {
     rows = winsz.ws_row >> 1;
     cols = winsz.ws_col >> 1;
     total = rows * cols;
-    bytes = (total + 7) / 8;
+    bytes = (total + 7) >> 3;
     // objects will be roughly centred at 75% of the screen
     int range = winsz.ws_ypixel > winsz.ws_xpixel ? winsz.ws_xpixel >> 1 : winsz.ws_ypixel >> 1;
     donut.R1 = range * 1.0 / 8;
     donut.R2 = range * 2.0 / 8;
+    heart.unit = range * 3.0 / 160;
 }
 
 void finish() {
@@ -99,6 +101,7 @@ int main(void) {
     signal(SIGTSTP, sig_handler);
 
     Donut *p0 = &donut;
+    Heart *p1 = &heart;
     setup();
     create_windows();
 
@@ -116,7 +119,7 @@ int main(void) {
         while (f_resize);
         if ((keypress = wgetch(stdscr)) == ERR ) {
 	    draw_donut(p0, windows[0]);
-	    draw_donut(p0, windows[1]);
+	    draw_heart(p1, windows[1]);
 	    draw_donut(p0, windows[2]);
 	    draw_donut(p0, windows[3]);
         } else {
