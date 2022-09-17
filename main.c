@@ -21,6 +21,7 @@ static useconds_t delay = 40000 ;
 static struct winsize winsz;
 static Donut donut = {0.0};
 static Heart heart = {0.0};
+static Cube cube = {0.0};
 static WINDOW *windows[4];
 
 void clear_screen() {
@@ -51,9 +52,12 @@ void setup() {
     bytes = (total + 7) >> 3;
     // objects will be roughly centred at 75% of the screen
     int range = winsz.ws_ypixel > winsz.ws_xpixel ? winsz.ws_xpixel >> 1 : winsz.ws_ypixel >> 1;
-    donut.R1 = range * 1.0 / 8;
-    donut.R2 = range * 2.0 / 8;
-    heart.unit = range * 3.0 / 160;
+    donut.R1 = range * 0.125; // 1 / 8
+    donut.R2 = range * 0.25; // 2 / 8
+    heart.unit = range * 0.01875; // 3 / 8 / 20
+    //cube.side = range * 0.21651; // 3 / 8 / sqrt3
+    cube.side = range * 0.26; // 3 / 8 / sqrt2
+    cube.step = 1.0 * range / 150; // total 300 points
 }
 
 void finish() {
@@ -103,6 +107,7 @@ int main(void) {
 
     Donut *p0 = &donut;
     Heart *p1 = &heart;
+    Cube *p2 = &cube;
     setup();
     create_windows();
 
@@ -121,7 +126,7 @@ int main(void) {
         if ((keypress = wgetch(stdscr)) == ERR ) {
 	    draw_donut(p0, windows[0]);
 	    draw_heart(p1, windows[1]);
-	    draw_donut(p0, windows[2]);
+	    draw_cube(p2, windows[2]);
 	    draw_donut(p0, windows[3]);
 	    usleep(delay);
         } else {

@@ -7,6 +7,19 @@
 #define TESTBIT(A,k) (A[(k)/8] & (1 << ((k)%8)))
 extern int ppr, ppc, rows, cols, total, bytes;
 
+void draw_char(uint8_t *output, char *emoji, WINDOW *win) {
+    wmove(win, 0, 0);
+    for(int k = 0; k < total; k++) {
+        if (TESTBIT(output, k)) {
+            waddstr(win, emoji);
+            k++; //depends on how many 'cursor' places the symbol takes
+        } else {
+            waddch(win, 32);// ascii space
+        }
+    }
+    wrefresh(win);
+}
+
 void draw_donut(Donut *donut, WINDOW *win) {
     uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
@@ -30,18 +43,9 @@ void draw_donut(Donut *donut, WINDOW *win) {
     	    SETBIT(output, index);
 	}
     }
-    wmove(win, 0, 0);
-    for(int k = 0; k < total; k++) {
-        if (TESTBIT(output, k)) {
-            waddstr(win, "🍩");
-            k++; //depends on how many 'cursor' places the symbol takes
-        } else {
-            waddch(win, 32);// ascii space
-        }
-    }
+    draw_char(output, "🍩", win);
     donut->x_rotate += 0.07;
     donut->z_rotate += 0.03;
-    wrefresh(win);
 }
 
 /*Julia's parametric heart surface equation is used here*/
@@ -72,16 +76,43 @@ void draw_heart(Heart *heart, WINDOW *win) {
             SETBIT(output, index);
 	}
     }
-    wmove(win, 0, 0);
-    for(int k = 0; k < total; k++) {
-        if (TESTBIT(output, k)) {
-            waddstr(win, "❤ ");
-            k++; //depends on how many 'cursor' places the symbol takes
-        } else {
-            waddch(win, 32);// ascii space
-        }
-    }
+    draw_char(output, "❤ ", win);
     heart->x_rotate += 0.07;
     heart->z_rotate -= 0.03;
-    wrefresh(win);
+}
+
+void map_store(uint8_t *output, float _x, float _y, float _z, Trig *trig) {
+    float x = _x * trig->cosB + _y * trig->sinB;
+    float y = trig->cosA * (_y * trig->cosB - _x * trig->sinB) + _z * trig->sinA;
+    float z = -trig->sinA * (_y * trig->cosB - _x * trig->sinB) + _z * trig->cosA;
+    x += 0.2239 * z;
+    y += 0.4471 * z;
+    int proj_x = (int) ((cols >> 1) + x / ppc);
+    int proj_y = (int) ((rows >> 1) - y / ppr);
+    int index = proj_x + cols * proj_y;
+    SETBIT(output, index);
+}
+
+void draw_cube(Cube *cube, WINDOW *win) {
+    uint8_t output[bytes]; //output bitmap
+    float half = cube->side;
+    Trig trig;
+    trig.cosA = cos(cube->x_rotate);
+    trig.sinA = sin(cube->x_rotate);
+    trig.cosB = cos(cube->z_rotate);
+    trig.sinB = sin(cube->z_rotate);
+    memset(output, 0, bytes);
+    for (float x = -half; x < half; x += cube->step) {
+        for (float z = -half; z < half; z += cube->step) {
+          map_store(output, x, -half, z, &trig);
+          map_store(output, x, half, z, &trig);
+          map_store(output, -half, x, z, &trig);
+          map_store(output, half, x, z, &trig);
+          map_store(output, x, -z, -half, &trig);
+          map_store(output, x, -z, half, &trig);
+        }
+    }
+    draw_char(output, "🧊", win);
+    cube->x_rotate -= 0.07;
+    cube->z_rotate += 0.03;
 }
