@@ -17,6 +17,7 @@ static int f_resize = 0; // resize caused by adjusting font size
 static int to_finish = 0;
 static int ppr_min = 5, ppr_max = 27;
 static int keypress;
+static useconds_t delay = 40000 ;
 static struct winsize winsz;
 static Donut donut = {0.0};
 static Heart heart = {0.0};
@@ -122,6 +123,7 @@ int main(void) {
 	    draw_heart(p1, windows[1]);
 	    draw_donut(p0, windows[2]);
 	    draw_donut(p0, windows[3]);
+	    usleep(delay);
         } else {
 	    switch (keypress) {
                 case 'q':

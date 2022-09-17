@@ -1,7 +1,6 @@
 #include <ncurses.h>
 #include <math.h>
 #include <string.h>
-#include <unistd.h>
 #include "shapes.h"
 
 #define SETBIT(A,k) (A[(k)/8] |= (1 << ((k)%8)))
@@ -43,7 +42,6 @@ void draw_donut(Donut *donut, WINDOW *win) {
     donut->x_rotate += 0.07;
     donut->z_rotate += 0.03;
     wrefresh(win);
-    usleep(5000);
 }
 
 /*Julia's parametric heart surface equation is used here*/
@@ -65,7 +63,7 @@ void draw_heart(Heart *heart, WINDOW *win) {
             float sinv = sin(v);
 	    float _x = heart->unit * sinv * (15 * sinu - 4 * sin3u);
 	    float _y = heart->unit * sinv * (15 * cosu - 5 * cos2u - 2 * cos3u - cos2u);
-	    float _z = heart->unit * 8 * cosv;
+	    float _z = heart->unit * 10 * cosv;
 	    float x = _x * cosB + _y * sinB;
 	    float y = cosA * (_y * cosB - _x * sinB) + _z * sinA;
             int proj_x = (int) ((cols >> 1) + x / ppc);
@@ -86,5 +84,4 @@ void draw_heart(Heart *heart, WINDOW *win) {
     heart->x_rotate += 0.07;
     heart->z_rotate -= 0.03;
     wrefresh(win);
-    usleep(5000);
 }
