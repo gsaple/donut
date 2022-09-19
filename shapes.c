@@ -81,7 +81,7 @@ void draw_heart(Heart *heart, WINDOW *win) {
     heart->z_rotate -= 0.03;
 }
 
-void map_store(uint8_t *output, float _x, float _y, float _z, Trig *trig) {
+void cube_store(uint8_t *output, float _x, float _y, float _z, Trig *trig) {
     float x = _x * trig->cosB + _y * trig->sinB;
     float y = trig->cosA * (_y * trig->cosB - _x * trig->sinB) + _z * trig->sinA;
     float z = -trig->sinA * (_y * trig->cosB - _x * trig->sinB) + _z * trig->cosA;
@@ -104,12 +104,12 @@ void draw_cube(Cube *cube, WINDOW *win) {
     memset(output, 0, bytes);
     for (float x = -half; x < half; x += cube->step) {
         for (float z = -half; z < half; z += cube->step) {
-          map_store(output, x, -half, z, &trig);
-          map_store(output, x, half, z, &trig);
-          map_store(output, -half, x, z, &trig);
-          map_store(output, half, x, z, &trig);
-          map_store(output, x, -z, -half, &trig);
-          map_store(output, x, -z, half, &trig);
+          cube_store(output, x, -half, z, &trig);
+          cube_store(output, x, half, z, &trig);
+          cube_store(output, -half, x, z, &trig);
+          cube_store(output, half, x, z, &trig);
+          cube_store(output, x, -z, -half, &trig);
+          cube_store(output, x, -z, half, &trig);
         }
     }
     draw_char(output, "🧊", win);
@@ -134,9 +134,9 @@ void draw_knot(Knot *knot, WINDOW *win) {
 	    float sintheta = sin(theta);
 	    float c1 = knot->R2 + knot->R1 * cosphi;
 	    float c2 = knot->q * knot->R1;
-	    float k1 = c1 * cos(theta);
-	    float k2 = c1 * sin(theta);
-	    float k3 = knot->R1 * sin(phi);
+	    float k1 = c1 * costheta;
+	    float k2 = c1 * sintheta;
+	    float k3 = knot->R1 * sinphi;
 	    float n1 = costheta * cosphi;
 	    float n2 = sintheta * cosphi;
 	    float n3 = sinphi;
@@ -162,4 +162,33 @@ void draw_knot(Knot *knot, WINDOW *win) {
     }
     draw_char(output, "🌺", win);
     knot->y_rotate += 0.03;
+}
+
+void draw_cone(Cone *cone, WINDOW *win) {
+    uint8_t output[bytes]; //output bitmap
+    memset(output, 0, bytes);
+    float cosA = cos(cone->x_rotate);
+    float sinA = sin(cone->x_rotate);
+    float cosB = cos(cone->z_rotate);
+    float sinB = sin(cone->z_rotate);
+    float H = cone->H;
+    float r = cone->r;
+
+    for (float u = 0; u < 6.28; u += 0.02) {
+	float cosu = cos(u);
+	float sinu = sin(u);
+        for (float h = -H; h < H; h += 0.02) {
+            float _x = h / H * r * cosu;
+            float _z = h / H * r * sinu;
+            float x = _x * cosB + h * sinB;
+            float y = cosA * (h * cosB - _x * sinB) + _z * sinA;
+            int proj_x = (int) ((cols >> 1) + x / ppc);
+            int proj_y = (int) ((rows >> 1) - y / ppr);
+            int index = proj_x + cols * proj_y;
+            SETBIT(output, index);
+	}
+    }
+    draw_char(output, "🥦", win);
+    cone->x_rotate -= 0.07;
+    cone->z_rotate += 0.03;
 }

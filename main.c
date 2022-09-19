@@ -21,8 +21,9 @@ static useconds_t delay = 40000 ;
 static struct winsize winsz;
 static Donut donut = {0.0};
 static Heart heart = {0.0};
-static Cube cube = {0.0};
+//static Cube cube = {0.0};
 static Knot knot = {0.0};
+static Cone cone = {0.0};
 static WINDOW *windows[4];
 
 void clear_screen() {
@@ -56,8 +57,10 @@ void setup() {
     donut.R1 = range * 0.125; // 0.375 * (1 / 3)
     donut.R2 = range * 0.25; //  0.375 * (2 / 3)
     heart.unit = range * 0.01875; // 0.375 / 20
-    cube.side = range * 0.23; // between 0.375 / sqrt2 and 0.375 / sqrt3
-    cube.step = 1.0 * range / 150; // total 300 points
+    //cube.side = range * 0.23; // between 0.375 / sqrt2 and 0.375 / sqrt3
+    //cube.step = 1.0 * range / 150; // total 300 points
+    cone.H = range * 0.375;
+    cone.r = range * 0.23; // between 0.375 / sqrt2 and 0.375 / sqrt3
     knot.R1 = range * 0.15; // 0.375 * 0.4
     knot.R2 = range * 0.225; // 0.375 * 0.6
     knot.R3 = knot.R1 * 0.1;
@@ -113,7 +116,8 @@ int main(void) {
 
     Donut *p0 = &donut;
     Heart *p1 = &heart;
-    Cube *p2 = &cube;
+    //Cube *p2 = &cube;
+    Cone *p2 = &cone;
     Knot *p3 = &knot;
     setup();
     create_windows();
@@ -133,9 +137,10 @@ int main(void) {
         if ((keypress = wgetch(stdscr)) == ERR ) {
 	    draw_donut(p0, windows[0]);
 	    draw_heart(p1, windows[1]);
-	    draw_cube(p2, windows[2]);
+	    draw_cone(p2, windows[2]);
+            /* this knot already caused some delay on an Intel-i5 CPU :( */
 	    draw_knot(p3, windows[3]);
-	    usleep(delay);
+	    //usleep(delay);
         } else {
 	    switch (keypress) {
                 case 'q':
