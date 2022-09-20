@@ -125,6 +125,20 @@ void draw_cube(Cube *cube, WINDOW *win) {
     cube->z_rotate += 0.03;
 }
 
+/* https://en.wikipedia.org/wiki/Fast_inverse_square_root */
+float Q_rsqrt(float number) {
+    long i;
+    float x2, y;
+    const float threehalfs = 1.5F;
+    x2 = number * 0.5F;
+    y  = number;
+    i  = * (long *) &y;                       // evil floating point bit level hacking
+    i  = 0x5f3759df - ( i >> 1 );             // what the fuck?
+    y  = * (float *) &i;
+    y  = y * (threehalfs - ( x2 * y * y ));   // 1st iteration
+    return y;
+}
+
 void draw_knot(Knot *knot, WINDOW *win) {
     uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
@@ -151,10 +165,10 @@ void draw_knot(Knot *knot, WINDOW *win) {
 	    float _t1 = -c2 * sinphi * costheta - knot->p * c1 * sintheta;
 	    float _t2 = -c2 * sinphi * sintheta + knot->p * c1 * costheta;
 	    float _t3 = c2 * cosphi;
-	    float length = sqrt(_t1 * _t1 + _t2 * _t2 + _t3 * _t3);
-	    float t1 = _t1 / length;
-	    float t2 = _t2 / length;
-	    float t3 = _t3 / length;
+	    float r_length = Q_rsqrt(_t1 * _t1 + _t2 * _t2 + _t3 * _t3);
+	    float t1 = _t1 * r_length;
+	    float t2 = _t2 * r_length;
+	    float t3 = _t3 * r_length;
 	    float b1 = t2 * n3 - n2 * t3;
 	    float b2 = n1 * t3 - t1 * n3;
 	    float b3 = t1 * n2 - n1 * t2;
