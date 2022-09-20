@@ -39,6 +39,7 @@ typedef struct Cone {
   float z_rotate;
   float H;
   float r;
+  float step;
 } Cone;
 
 void draw_char(uint8_t *output, char *emoji, WINDOW *win);

@@ -61,6 +61,7 @@ void setup() {
     //cube.step = 1.0 * range / 150; // total 300 points
     cone.H = range * 0.375;
     cone.r = range * 0.23; // between 0.375 / sqrt2 and 0.375 / sqrt3
+    cone.step = 1.0 * range / 150; // total 300 points
     knot.R1 = range * 0.15; // 0.375 * 0.4
     knot.R2 = range * 0.225; // 0.375 * 0.6
     knot.R3 = knot.R1 * 0.1;

@@ -177,7 +177,7 @@ void draw_cone(Cone *cone, WINDOW *win) {
     for (float u = 0; u < 6.28; u += 0.02) {
 	float cosu = cos(u);
 	float sinu = sin(u);
-        for (float h = -H; h < H; h += 0.02) {
+        for (float h = -H; h < H; h += cone->step) {
             float _x = h / H * r * cosu;
             float _z = h / H * r * sinu;
             float x = _x * cosB + h * sinB;
