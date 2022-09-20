@@ -7,6 +7,14 @@
 #define TESTBIT(A,k) (A[(k)/8] & (1 << ((k)%8)))
 extern int ppr, ppc, rows, cols, total, bytes;
 
+/* only for drawing cube */
+typedef struct Trig {
+  float cosA;
+  float sinA;
+  float cosB;
+  float sinB;
+} Trig;
+
 void draw_char(uint8_t *output, char *emoji, WINDOW *win) {
     wmove(win, 0, 0);
     for(int k = 0; k < total; k++) {
