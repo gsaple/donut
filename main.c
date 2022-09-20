@@ -19,11 +19,11 @@ static int ppr_min = 5, ppr_max = 27;
 static int keypress;
 static useconds_t delay = 40000 ;
 static struct winsize winsz;
-static Donut donut = {0.0};
-static Heart heart = {0.0};
-//static Cube cube = {0.0};
-static Knot knot = {0.0};
-static Cone cone = {0.0};
+static Donut donut = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
+static Heart heart = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
+//static Cube cube = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
+static Knot knot = {.cosy = 1.0, .siny = 0.0};
+static Cone cone = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
 static WINDOW *windows[4];
 
 void clear_screen() {
@@ -138,6 +138,7 @@ int main(void) {
         if ((keypress = wgetch(stdscr)) == ERR ) {
 	    draw_donut(p0, windows[0]);
 	    draw_heart(p1, windows[1]);
+	    //draw_cube(p2, windows[2]);
 	    draw_cone(p2, windows[2]);
             /* this knot already caused some delay on an Intel-i5 CPU :( */
 	    draw_knot(p3, windows[3]);

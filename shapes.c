@@ -1,5 +1,4 @@
 #include <ncurses.h>
-#include <math.h>
 #include <string.h>
 #include "shapes.h"
 
@@ -9,11 +8,20 @@ extern int ppr, ppc, rows, cols, total, bytes;
 
 /* only for drawing cube */
 typedef struct Trig {
-  float cosA;
-  float sinA;
-  float cosB;
-  float sinB;
+  float cosx;
+  float sinx;
+  float cosz;
+  float sinz;
 } Trig;
+
+/* https://www.a1k0n.net/2021/01/13/optimizing-donut.html */
+#define R(t,x,y) \
+  _ = x; \
+  x -= t*y; \
+  y += t*_; \
+  _ = (3-x*x-y*y)/2; \
+  x *= _; \
+  y *= _;
 
 void draw_char(uint8_t *output, char *emoji, WINDOW *win) {
     wmove(win, 0, 0);
@@ -29,70 +37,77 @@ void draw_char(uint8_t *output, char *emoji, WINDOW *win) {
 }
 
 void draw_donut(Donut *donut, WINDOW *win) {
+    float _;
     uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
-    float cosA = cos(donut->x_rotate);
-    float sinA = sin(donut->x_rotate);
-    float cosB = cos(donut->z_rotate);
-    float sinB = sin(donut->z_rotate);
-    for (float theta = 0; theta < 6.28; theta += 0.07) {
-        float costheta = cos(theta);
-        float sintheta = sin(theta);
-        for(float phi = 0; phi < 6.28; phi += 0.02) {
-            float cosphi = cos(phi);
-    	    float sinphi = sin(phi);
+    float cosz = donut->cosz;
+    float sinz = donut->sinz;
+    float cosx = donut->cosx;
+    float sinx = donut->sinx;
+    float costheta = 1.0;
+    float sintheta = 0.0;
+    for (int j = 0; j < 90; j++) {
+        float cosphi = 1.0;
+        float sinphi = 0.0;
+        for(int i = 0; i < 314; i++) {
             float circlex = donut->R2 + donut->R1 * costheta;
             float circley = donut->R1 * sintheta;
-    	    float x = circlex*(cosB*cosphi + sinA*sinB*sinphi) - circley*cosA*sinB; 
-            float y = circlex*(sinB*cosphi - sinA*cosB*sinphi) + circley*cosA*cosB;
+            float x = circlex*(cosz*cosphi + sinx*sinz*sinphi) - circley*cosx*sinz;
+            float y = circlex*(sinz*cosphi - sinx*cosz*sinphi) + circley*cosx*cosz;
             int proj_x = (int) ((cols >> 1) + x / ppc);
             int proj_y = (int) ((rows >> 1) - y / ppr);
     	    int index = proj_x + cols * proj_y;
     	    SETBIT(output, index);
+	    R(0.02, cosphi, sinphi)
 	}
+	R(0.07, costheta, sintheta)
     }
     draw_char(output, "🍩", win);
-    donut->x_rotate += 0.07;
-    donut->z_rotate += 0.03;
+    R(0.07, donut->cosx, donut->sinx)
+    R(0.03, donut->cosz, donut->sinz)
 }
 
 /*Julia's parametric heart surface equation is used here*/
 void draw_heart(Heart *heart, WINDOW *win) {
+    float _;
     uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
-    float cosA = cos(heart->x_rotate);
-    float sinA = sin(heart->x_rotate);
-    float cosB = cos(heart->z_rotate);
-    float sinB = sin(heart->z_rotate);
-    for (float u = 0; u < 6.28; u += 0.02) {
-        float cosu = cos(u);
-        float cos2u = cos(2 * u);
-        float cos3u = cos(3 * u);
-        float sinu = sin(u);
-        float sin3u = sin(u * 3);
-        for(float v = 0; v < 3.14; v += 0.02) {
-            float cosv = cos(v);
-            float sinv = sin(v);
+    float cosz = heart->cosz;
+    float sinz = heart->sinz;
+    float cosx = heart->cosx;
+    float sinx = heart->sinx;
+    float cosu = 1.0;
+    float sinu = 0.0;
+    float cos3u = 1.0;
+    float sin3u = 0.0;
+    for (int i = 0; i < 314; i++) {
+        float cos2u = 2 * cosu * cosu - 1;
+        float cosv = 1.0;
+        float sinv = 0.0;
+        for(int j = 0; j < 157; j++) {
 	    float _x = heart->unit * sinv * (15 * sinu - 4 * sin3u);
 	    float _y = heart->unit * sinv * (15 * cosu - 5 * cos2u - 2 * cos3u - cos2u);
 	    float _z = heart->unit * 10 * cosv;
-	    float x = _x * cosB + _y * sinB;
-	    float y = cosA * (_y * cosB - _x * sinB) + _z * sinA;
+	    float x = _x * cosz + _y * sinz;
+	    float y = cosx * (_y * cosz - _x * sinz) + _z * sinx;
             int proj_x = (int) ((cols >> 1) + x / ppc);
             int proj_y = (int) ((rows >> 1) - y / ppr);
             int index = proj_x + cols * proj_y;
             SETBIT(output, index);
+	    R(0.02, cosv, sinv)
 	}
+	R(0.02, cosu, sinu)
+	R(0.06, cos3u, sin3u)
     }
     draw_char(output, "❤ ", win);
-    heart->x_rotate += 0.07;
-    heart->z_rotate -= 0.03;
+    R(0.07, heart->cosx, heart->sinx)
+    R(-0.03, heart->cosz, heart->sinz);
 }
 
 void cube_store(uint8_t *output, float _x, float _y, float _z, Trig *trig) {
-    float x = _x * trig->cosB + _y * trig->sinB;
-    float y = trig->cosA * (_y * trig->cosB - _x * trig->sinB) + _z * trig->sinA;
-    float z = -trig->sinA * (_y * trig->cosB - _x * trig->sinB) + _z * trig->cosA;
+    float x = _x * trig->cosz + _y * trig->sinz;
+    float y = trig->cosx * (_y * trig->cosz - _x * trig->sinz) + _z * trig->sinx;
+    float z = -trig->sinx * (_y * trig->cosz - _x * trig->sinz) + _z * trig->cosx;
     x += 0.2239 * z;
     y += 0.4471 * z;
     int proj_x = (int) ((cols >> 1) + x / ppc);
@@ -102,13 +117,14 @@ void cube_store(uint8_t *output, float _x, float _y, float _z, Trig *trig) {
 }
 
 void draw_cube(Cube *cube, WINDOW *win) {
+    float _;
     uint8_t output[bytes]; //output bitmap
     float half = cube->side;
     Trig trig;
-    trig.cosA = cos(cube->x_rotate);
-    trig.sinA = sin(cube->x_rotate);
-    trig.cosB = cos(cube->z_rotate);
-    trig.sinB = sin(cube->z_rotate);
+    trig.cosx = cube->cosx;
+    trig.sinx = cube->sinx;
+    trig.cosz = cube->cosz;
+    trig.sinz = cube->sinz;
     memset(output, 0, bytes);
     for (float x = -half; x < half; x += cube->step) {
         for (float z = -half; z < half; z += cube->step) {
@@ -121,8 +137,8 @@ void draw_cube(Cube *cube, WINDOW *win) {
         }
     }
     draw_char(output, "🧊", win);
-    cube->x_rotate -= 0.07;
-    cube->z_rotate += 0.03;
+    R(-0.07, cube->cosx, cube->sinx)
+    R(0.03, cube->cosz, cube->sinz)
 }
 
 /* https://en.wikipedia.org/wiki/Fast_inverse_square_root */
@@ -133,27 +149,32 @@ float Q_rsqrt(float number) {
     x2 = number * 0.5F;
     y  = number;
     i  = * (long *) &y;                       // evil floating point bit level hacking
-    i  = 0x5f3759df - ( i >> 1 );             // what the fuck?
+    i  = 0x5f3759df - (i >> 1);             // what the fuck?
     y  = * (float *) &i;
-    y  = y * (threehalfs - ( x2 * y * y ));   // 1st iteration
+    y  = y * (threehalfs - (x2 * y * y));   // 1st iteration
     return y;
 }
 
 void draw_knot(Knot *knot, WINDOW *win) {
+    float _;
     uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
-    float cosy = cos(knot->y_rotate);
-    float siny = sin(knot->y_rotate);
-    for (float u = 0; u < 6.28; u += 0.02) {
-        float hu = knot->R3 * cos(u);
-        float vu = knot->R3 * sin(u);
-        for (float t = 0; t < 6.28; t += 0.01) {
-	    float phi = knot->q * t;
-	    float theta = knot->p * t;
-	    float cosphi = cos(phi);
-	    float sinphi = sin(phi);
-	    float costheta = cos(theta);
-	    float sintheta = sin(theta);
+    float cosy = knot->cosy;
+    float siny = knot->siny;
+    float cosu = 1.0;
+    float sinu = 0.0;
+    /* p, q should not be too large here
+     * angle works when tanx ~= x */
+    float phi_angle = knot->q * 0.01;
+    float theta_angle = knot->p * 0.01;
+    for (int i = 0; i < 314; i++) {
+        float hu = knot->R3 * cosu;
+        float vu = knot->R3 * sinu;
+        float cosphi = 1.0;
+        float sinphi = 0.0;
+        float costheta = 1.0;
+        float sintheta = 0.0;
+        for (int j = 0; j < 628; j++) {
 	    float c1 = knot->R2 + knot->R1 * cosphi;
 	    float c2 = knot->q * knot->R1;
 	    float k1 = c1 * costheta;
@@ -180,37 +201,41 @@ void draw_knot(Knot *knot, WINDOW *win) {
             int proj_y = (int) ((rows >> 1) - _y / ppr);
             int index = proj_x + cols * proj_y;
             SETBIT(output, index);
+	    R(phi_angle, cosphi, sinphi)
+	    R(theta_angle, costheta, sintheta)
         }
+	R(0.02, cosu, sinu)
     }
     draw_char(output, "🌺", win);
-    knot->y_rotate += 0.03;
+    R(0.03, knot->cosy, knot->siny)
 }
 
 void draw_cone(Cone *cone, WINDOW *win) {
+    float _;
     uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
-    float cosA = cos(cone->x_rotate);
-    float sinA = sin(cone->x_rotate);
-    float cosB = cos(cone->z_rotate);
-    float sinB = sin(cone->z_rotate);
+    float cosz = cone->cosz;
+    float sinz = cone->sinz;
+    float cosx = cone->cosx;
+    float sinx = cone->sinx;
     float H = cone->H;
     float r = cone->r;
-
-    for (float u = 0; u < 6.28; u += 0.02) {
-	float cosu = cos(u);
-	float sinu = sin(u);
+    float cosu = 1.0;
+    float sinu = 0.0;
+    for (int i = 0; i < 314; i++) {
         for (float h = -H; h < H; h += cone->step) {
             float _x = h / H * r * cosu;
             float _z = h / H * r * sinu;
-            float x = _x * cosB + h * sinB;
-            float y = cosA * (h * cosB - _x * sinB) + _z * sinA;
+            float x = _x * cosz + h * sinz;
+            float y = cosx * (h * cosz - _x * sinz) + _z * sinx;
             int proj_x = (int) ((cols >> 1) + x / ppc);
             int proj_y = (int) ((rows >> 1) - y / ppr);
             int index = proj_x + cols * proj_y;
             SETBIT(output, index);
 	}
+	R(0.02, cosu, sinu)
     }
     draw_char(output, "🥦", win);
-    cone->x_rotate -= 0.07;
-    cone->z_rotate += 0.03;
+    R(-0.07, cone->cosx, cone->sinx)
+    R(0.03, cone->cosz, cone->sinz)
 }

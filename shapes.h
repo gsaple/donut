@@ -1,25 +1,32 @@
 typedef struct Donut {
-  float x_rotate;
-  float z_rotate;
+  float cosz;
+  float sinz;
+  float cosx;
+  float sinx;
   float R1;
   float R2;
 } Donut;
 
 typedef struct Heart {
-  float x_rotate;
-  float z_rotate;
+  float cosz;
+  float sinz;
+  float cosx;
+  float sinx;
   float unit;
 } Heart;
 
 typedef struct Cube {
-  float x_rotate;
-  float z_rotate;
+  float cosz;
+  float sinz;
+  float cosx;
+  float sinx;
   float side;
   float step;
 } Cube;
 
 typedef struct Knot {
-  float y_rotate;
+  float cosy;
+  float siny;
   float R1;
   float R2;
   float R3;
@@ -28,8 +35,10 @@ typedef struct Knot {
 } Knot;
 
 typedef struct Cone {
-  float x_rotate;
-  float z_rotate;
+  float cosz;
+  float sinz;
+  float cosx;
+  float sinx;
   float H;
   float r;
   float step;
