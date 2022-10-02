@@ -99,7 +99,7 @@ void draw_heart(Heart *heart, WINDOW *win) {
 	R(0.02, cosu, sinu)
 	R(0.06, cos3u, sin3u)
     }
-    draw_char(output, "❤ ", win);
+    draw_char(output, "💞", win);
     R(0.07, heart->cosx, heart->sinx)
     R(-0.03, heart->cosz, heart->sinz);
 }
