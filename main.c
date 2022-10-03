@@ -6,20 +6,17 @@
 #include <stdlib.h>
 #include "shapes.h"
 #include "zoom.h"
-#include <time.h>
 
 int ppr = 0, ppc = 0; // pixels_per_row, pixels_per_column
 int rows, cols; // rows_per_window, cols_per_window
 int total; // how many grids in one window
 int bytes; // how much memory (bytes) needed for one window to do bitwise operations
 
-static int w_resize = 0; // resize caused by adjusting window size
-static int f_resize = 0; // resize caused by adjusting font size
-static int signal_detected = 0;
+static int resize = 0; // resize caused by adjusting window size or font size
+static int jk_resize = 0; // resize caused by pressing j or k to adjust font size
 static int to_finish = 0;
 static int ppr_min = 5, ppr_max = 27;
 static int keypress;
-static useconds_t delay = 40000 ;
 static struct winsize winsz;
 static Donut donut = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
 static Heart heart = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
@@ -30,9 +27,10 @@ static WINDOW *windows[4];
 
 void clear_screen() {
     for (int i = 0; i < 4; i++) {
+        wclear(windows[i]);
+        wrefresh(windows[i]);
         delwin(windows[i]);
     }
-    touchwin(stdscr);
     refresh();
 }
 
@@ -89,10 +87,11 @@ void sig_handler(int sig) {
         if (ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz) == -1)
             return;
 	if (keypress == 'k' || keypress == 'j') {
-            signal_detected = 1;
+            setup();
+            resizeterm(winsz.ws_row, winsz.ws_col);
 	    return;
 	}
-	w_resize = 1;
+	resize = 1;
 	return;
     }
 }
@@ -117,33 +116,25 @@ int main(void) {
     Knot *p3 = &knot;
     setup();
     create_windows();
-    clock_t start;
-    float expire = 0.1; // this value might be machine dependent?
-    float time_passed;
+    useconds_t delay = 40000; // delay for animation
+    /* 0.3 second grace period for SIGWINCH passing if ever triggered at all,
+       this value should be machine dependent ??? */
+    useconds_t expire = 300000;
 
     while (1) {
 	while (to_finish) {finish();}
-	while (w_resize) {
-	    clear_screen();
-	    setup();
+	while (resize) {
 	    if (winsz.ws_row >= 2 && winsz.ws_col >= 2) {
+	        clear_screen();
+	        setup();
                 resizeterm(winsz.ws_row, winsz.ws_col);
                 create_windows();
-                w_resize = 0;
+                resize = 0;
 	    }
 	}
-        while (f_resize) {
-	    time_passed = (float) (clock() - start) / CLOCKS_PER_SEC;
-	    while (signal_detected || time_passed > expire) {
-		if (signal_detected) {
-	            setup();
-                    resizeterm(winsz.ws_row, winsz.ws_col);
-		}
-	        create_windows();
-                f_resize = 0;
-		signal_detected = 0;
-		time_passed = 0;
-	    }
+        while (jk_resize) {
+	    create_windows();
+            jk_resize = 0;
 	}
         if ((keypress = wgetch(stdscr)) == ERR ) {
 	    draw_donut(p0, windows[0]);
@@ -160,18 +151,18 @@ int main(void) {
 		    break;
 		case 'j':
 		    if (ppr > ppr_min) {
-			f_resize = 1;
+		        jk_resize = 1;
                         clear_screen();
-			start = clock();
 		        system(zoom_out);
+	                usleep(expire);
 		    } 
 		    break;
 		case 'k':
 		    if (ppr < ppr_max) {
-			f_resize = 1;
+			jk_resize = 1;
                         clear_screen();
-			start = clock();
 		        system(zoom_in);
+	                usleep(expire);
 		    }
 	    	    break;
 	    }
