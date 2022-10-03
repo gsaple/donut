@@ -20,13 +20,13 @@ static int keypress;
 static struct winsize winsz;
 static Donut donut = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
 static Heart heart = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
-//static Cube cube = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
+static Cube cube = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
 static Knot knot = {.cosy = 1.0, .siny = 0.0};
 static Cone cone = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
-static WINDOW *windows[4];
+static WINDOW *windows[5];
 
 void clear_screen() {
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         wclear(windows[i]);
         wrefresh(windows[i]);
         delwin(windows[i]);
@@ -35,9 +35,11 @@ void clear_screen() {
 }
 
 void create_windows() {
-    for (int i = 0; i < 4; i++) {
-	windows[i] = newwin(rows, cols, i / 2 * (1 + rows), i % 2 * (1 + cols));
-    }
+    windows[0] = newwin(rows, cols, 0, 0);
+    windows[1] = newwin(rows, cols, 0, cols * 2);
+    windows[2] = newwin(rows, cols, rows, cols);
+    windows[3] = newwin(rows, cols, rows * 2, 0);
+    windows[4] = newwin(rows, cols, rows * 2, cols * 2);
     refresh();
 }
 
@@ -48,22 +50,22 @@ void setup() {
     }
     ppr = winsz.ws_ypixel / winsz.ws_row;
     ppc = winsz.ws_xpixel / winsz.ws_col;
-    rows = winsz.ws_row >> 1;
-    cols = winsz.ws_col >> 1;
+    rows = winsz.ws_row / 3;
+    cols = winsz.ws_col / 3;
     total = rows * cols;
     bytes = (total + 7) >> 3;
     // objects will be roughly centred at 75% of the screen
-    int range = winsz.ws_ypixel > winsz.ws_xpixel ? winsz.ws_xpixel >> 1 : winsz.ws_ypixel >> 1;
+    int range = winsz.ws_ypixel > winsz.ws_xpixel ? winsz.ws_xpixel / 3 : winsz.ws_ypixel / 3;
     donut.R1 = range * 0.125; // 0.375 * (1 / 3)
     donut.R2 = range * 0.25; //  0.375 * (2 / 3)
     heart.unit = range * 0.01875; // 0.375 / 20
-    //cube.side = range * 0.23; // between 0.375 / sqrt2 and 0.375 / sqrt3
-    //cube.step = 1.0 * range / 150; // total 300 points
+    cube.side = range * 0.23; // between 0.375 / sqrt2 and 0.375 / sqrt3
+    cube.step = 1.0 * range / 150; // total 300 points
     cone.H = range * 0.375;
     cone.r = range * 0.23; // between 0.375 / sqrt2 and 0.375 / sqrt3
     cone.step = 1.0 * range / 150; // total 300 points
-    knot.R1 = range * 0.15; // 0.375 * 0.4
-    knot.R2 = range * 0.225; // 0.375 * 0.6
+    knot.R1 = range * 0.175; // 7 / 16 * 0.4
+    knot.R2 = range * 0.2625; // 7 / 16 * 0.6
     knot.R3 = knot.R1 * 0.1;
     //(2, 5)-torus knot
     knot.p = 2;
@@ -111,9 +113,9 @@ int main(void) {
 
     Donut *p0 = &donut;
     Heart *p1 = &heart;
-    //Cube *p2 = &cube;
-    Cone *p2 = &cone;
-    Knot *p3 = &knot;
+    Knot *p2 = &knot;
+    Cone *p3 = &cone;
+    Cube *p4 = &cube;
     setup();
     create_windows();
     useconds_t delay = 40000; // delay for animation
@@ -124,7 +126,7 @@ int main(void) {
     while (1) {
 	while (to_finish) {finish();}
 	while (resize) {
-	    if (winsz.ws_row >= 2 && winsz.ws_col >= 2) {
+	    if (winsz.ws_row >= 3 && winsz.ws_col >= 3) {
 	        clear_screen();
 	        setup();
                 resizeterm(winsz.ws_row, winsz.ws_col);
@@ -139,10 +141,10 @@ int main(void) {
         if ((keypress = wgetch(stdscr)) == ERR ) {
 	    draw_donut(p0, windows[0]);
 	    draw_heart(p1, windows[1]);
-	    //draw_cube(p2, windows[2]);
-	    draw_cone(p2, windows[2]);
+	    draw_cube(p4, windows[4]);
+	    draw_cone(p3, windows[3]);
             /* this knot already caused some delay on an Intel-i5 CPU :( */
-	    draw_knot(p3, windows[3]);
+	    draw_knot(p2, windows[2]);
 	    //usleep(delay);
         } else {
 	    switch (keypress) {
