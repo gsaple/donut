@@ -44,8 +44,8 @@ typedef struct Cone {
   float step;
 } Cone;
 
-void draw_donut(Donut *donut, WINDOW *win);
-void draw_heart(Heart *heart, WINDOW *win);
-void draw_cube(Cube *cube, WINDOW *win);
-void draw_knot(Knot *knot, WINDOW *win);
-void draw_cone(Cone *cone, WINDOW *win);
+void draw_donut(Donut *donut, WINDOW *win, uint8_t *output);
+void draw_heart(Heart *heart, WINDOW *win, uint8_t *output);
+void draw_cube(Cube *cube, WINDOW *win, uint8_t *output);
+void draw_knot(Knot *knot, WINDOW *win, uint8_t *output);
+void draw_cone(Cone *cone, WINDOW *win, uint8_t *output);

@@ -36,9 +36,17 @@ void draw_char(uint8_t *output, char *emoji, WINDOW *win) {
     wrefresh(win);
 }
 
-void draw_donut(Donut *donut, WINDOW *win) {
+void term_xy(float x, float y, uint8_t *output) {
+    int proj_x = (int) ((cols >> 1) + x / ppc);
+    int proj_y = (int) ((rows >> 1) - y / ppr);
+    int index = proj_x + cols * proj_y;
+    if (index < total) {
+        SETBIT(output, index);
+    }
+}
+
+void draw_donut(Donut *donut, WINDOW *win, uint8_t *output) {
     float _;
-    uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
     float cosz = donut->cosz;
     float sinz = donut->sinz;
@@ -54,10 +62,7 @@ void draw_donut(Donut *donut, WINDOW *win) {
             float circley = donut->R1 * sintheta;
             float x = circlex*(cosz*cosphi + sinx*sinz*sinphi) - circley*cosx*sinz;
             float y = circlex*(sinz*cosphi - sinx*cosz*sinphi) + circley*cosx*cosz;
-            int proj_x = (int) ((cols >> 1) + x / ppc);
-            int proj_y = (int) ((rows >> 1) - y / ppr);
-    	    int index = proj_x + cols * proj_y;
-    	    SETBIT(output, index);
+            term_xy(x, y, output);
 	    R(0.02, cosphi, sinphi)
 	}
 	R(0.07, costheta, sintheta)
@@ -68,9 +73,8 @@ void draw_donut(Donut *donut, WINDOW *win) {
 }
 
 /*Julia's parametric heart surface equation is used here*/
-void draw_heart(Heart *heart, WINDOW *win) {
+void draw_heart(Heart *heart, WINDOW *win, uint8_t *output) {
     float _;
-    uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
     float cosz = heart->cosz;
     float sinz = heart->sinz;
@@ -90,10 +94,7 @@ void draw_heart(Heart *heart, WINDOW *win) {
 	    float _z = heart->unit * 10 * cosv;
 	    float x = _x * cosz + _y * sinz;
 	    float y = cosx * (_y * cosz - _x * sinz) + _z * sinx;
-            int proj_x = (int) ((cols >> 1) + x / ppc);
-            int proj_y = (int) ((rows >> 1) - y / ppr);
-            int index = proj_x + cols * proj_y;
-            SETBIT(output, index);
+            term_xy(x, y, output);
 	    R(0.02, cosv, sinv)
 	}
 	R(0.02, cosu, sinu)
@@ -110,15 +111,11 @@ void cube_store(uint8_t *output, float _x, float _y, float _z, Trig *trig) {
     float z = -trig->sinx * (_y * trig->cosz - _x * trig->sinz) + _z * trig->cosx;
     x += 0.2239 * z;
     y += 0.4471 * z;
-    int proj_x = (int) ((cols >> 1) + x / ppc);
-    int proj_y = (int) ((rows >> 1) - y / ppr);
-    int index = proj_x + cols * proj_y;
-    SETBIT(output, index);
+    term_xy(x, y, output);
 }
 
-void draw_cube(Cube *cube, WINDOW *win) {
+void draw_cube(Cube *cube, WINDOW *win, uint8_t *output) {
     float _;
-    uint8_t output[bytes]; //output bitmap
     float half = cube->side;
     Trig trig;
     trig.cosx = cube->cosx;
@@ -155,9 +152,8 @@ float Q_rsqrt(float number) {
     return y;
 }
 
-void draw_knot(Knot *knot, WINDOW *win) {
+void draw_knot(Knot *knot, WINDOW *win, uint8_t *output) {
     float _;
-    uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
     float cosy = knot->cosy;
     float siny = knot->siny;
@@ -197,10 +193,7 @@ void draw_knot(Knot *knot, WINDOW *win) {
 	    float _y = k2 + hu * n2 + vu * b2;
 	    float _z = k3 + hu * n3 + vu * b3;
 	    float x = cosy * _x - siny * _z;
-            int proj_x = (int) ((cols >> 1) + x / ppc);
-            int proj_y = (int) ((rows >> 1) - _y / ppr);
-            int index = proj_x + cols * proj_y;
-            SETBIT(output, index);
+            term_xy(x, _y, output);
 	    R(phi_angle, cosphi, sinphi)
 	    R(theta_angle, costheta, sintheta)
         }
@@ -210,9 +203,8 @@ void draw_knot(Knot *knot, WINDOW *win) {
     R(0.03, knot->cosy, knot->siny)
 }
 
-void draw_cone(Cone *cone, WINDOW *win) {
+void draw_cone(Cone *cone, WINDOW *win, uint8_t *output) {
     float _;
-    uint8_t output[bytes]; //output bitmap
     memset(output, 0, bytes);
     float cosz = cone->cosz;
     float sinz = cone->sinz;
@@ -228,10 +220,7 @@ void draw_cone(Cone *cone, WINDOW *win) {
             float _z = h / H * r * sinu;
             float x = _x * cosz + h * sinz;
             float y = cosx * (h * cosz - _x * sinz) + _z * sinx;
-            int proj_x = (int) ((cols >> 1) + x / ppc);
-            int proj_y = (int) ((rows >> 1) - y / ppr);
-            int index = proj_x + cols * proj_y;
-            SETBIT(output, index);
+            term_xy(x, y, output);
 	}
 	R(0.02, cosu, sinu)
     }

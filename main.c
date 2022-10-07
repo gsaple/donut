@@ -24,6 +24,7 @@ static Cube cube = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
 static Knot knot = {.cosy = 1.0, .siny = 0.0};
 static Cone cone = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
 static WINDOW *windows[5];
+static uint8_t *bitmap;
 
 void clear_screen() {
     for (int i = 0; i < 5; i++) {
@@ -44,10 +45,6 @@ void create_windows() {
 }
 
 void setup() {
-    //if it is the first time setup being called
-    if (!ppr) {
-        ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz);
-    }
     ppr = winsz.ws_ypixel / winsz.ws_row;
     ppc = winsz.ws_xpixel / winsz.ws_col;
     rows = winsz.ws_row / 3;
@@ -77,6 +74,7 @@ void finish() {
     curs_set(1);
     endwin();
     system(zoom_back);
+    free(bitmap);
     exit(0);
 }
 
@@ -90,6 +88,7 @@ void sig_handler(int sig) {
             return;
 	if (keypress == 'k' || keypress == 'j') {
             setup();
+            bitmap = (uint8_t *) realloc(bitmap, bytes);
             resizeterm(winsz.ws_row, winsz.ws_col);
 	    return;
 	}
@@ -116,12 +115,14 @@ int main(void) {
     Knot *p2 = &knot;
     Cone *p3 = &cone;
     Cube *p4 = &cube;
+    ioctl(STDIN_FILENO, TIOCGWINSZ, &winsz);
     setup();
+    bitmap = (uint8_t *) malloc(bytes);
     create_windows();
-    useconds_t delay = 40000; // delay for animation
+    int delay = 40; // delay for animation
     /* 0.3 second grace period for SIGWINCH passing if ever triggered at all,
        this value should be machine dependent ??? */
-    useconds_t expire = 300000;
+    int expire = 300;
 
     while (1) {
 	while (to_finish) {finish();}
@@ -129,23 +130,25 @@ int main(void) {
 	    if (winsz.ws_row >= 3 && winsz.ws_col >= 3) {
 	        clear_screen();
 	        setup();
+                bitmap = (uint8_t *) realloc(bitmap, bytes);
                 resizeterm(winsz.ws_row, winsz.ws_col);
                 create_windows();
                 resize = 0;
 	    }
 	}
         while (jk_resize) {
+	    napms(expire);
 	    create_windows();
             jk_resize = 0;
 	}
         if ((keypress = wgetch(stdscr)) == ERR ) {
-	    draw_donut(p0, windows[0]);
-	    draw_heart(p1, windows[1]);
-	    draw_cube(p4, windows[4]);
-	    draw_cone(p3, windows[3]);
+	    draw_donut(p0, windows[0], bitmap);
+	    draw_heart(p1, windows[1], bitmap);
+	    draw_cube(p4, windows[4], bitmap);
+	    draw_cone(p3, windows[3], bitmap);
             /* this knot already caused some delay on an Intel-i5 CPU :( */
-	    draw_knot(p2, windows[2]);
-	    //usleep(delay);
+	    draw_knot(p2, windows[2], bitmap);
+	    //napms(delay);
         } else {
 	    switch (keypress) {
                 case 'q':
@@ -156,7 +159,6 @@ int main(void) {
 		        jk_resize = 1;
                         clear_screen();
 		        system(zoom_out);
-	                usleep(expire);
 		    } 
 		    break;
 		case 'k':
@@ -164,7 +166,6 @@ int main(void) {
 			jk_resize = 1;
                         clear_screen();
 		        system(zoom_in);
-	                usleep(expire);
 		    }
 	    	    break;
 	    }
