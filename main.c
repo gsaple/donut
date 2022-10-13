@@ -15,7 +15,7 @@ int bytes; // how much memory (bytes) needed for one window to do bitwise operat
 static int resize = 0; // resize caused by adjusting window size or font size
 static int jk_resize = 0; // resize caused by pressing j or k to adjust font size
 static int to_finish = 0;
-static int ppr_min = 5, ppr_max = 27;
+static int ppr_min = 4, ppr_max = 27;
 static int keypress;
 static struct winsize winsz;
 static Donut donut = {.cosz = 1.0, .sinz = 0.0, .cosx = 1.0, .sinx = 0.0};
