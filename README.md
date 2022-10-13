@@ -21,6 +21,4 @@ https://user-images.githubusercontent.com/108666441/195562020-52e88f77-8d78-4afa
     1. press <kbd>j</kbd> to zoom out and <kbd>k</kbd> to zoom in: some delay (blank screen in the video) but no flickering
     2. directly zoom out or zoom in using your terminal commands: no delay but with discernible flickering
 - non-emoji: patch `non-emoji.diff` in the `irrelevant` folder if emoji is not needed
-- memory: when the terminal is zoomed out, the memory usage for alacritty increases while remains fixed for st; alacritty offers faster performance than st at certain 'tiny-font' levels.
- 
-    
+- memory: when the terminal is zoomed out, the memory usage for alacritty increases while remains almost fixed for st; alacritty offers faster performance than st at certain 'tiny-font' levels.
