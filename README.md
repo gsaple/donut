@@ -15,6 +15,7 @@ https://user-images.githubusercontent.com/108666441/195562020-52e88f77-8d78-4afa
 - use:
     1. run `donut`
     2. zoom in or zoom out or resize the terminal to your liking
+    3. <kbd>q</kbd> to quit
     
 ## other notes
 - two opitons to zoom:
